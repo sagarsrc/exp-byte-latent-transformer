@@ -133,6 +133,58 @@ def detect_patches_monotonic(sentence: str, entropies: List[float]) -> List[str]
     return patches
 
 
+def detect_patches_global(
+    sentence: str, entropies: List[float], threshold: float = None
+) -> List[str]:
+    """Detect patches using global threshold constraint based on byte-wise entropy"""
+    if threshold is None:
+        threshold = np.mean(entropies) + 1.0 * np.std(entropies)
+
+    print(f"Threshold: {threshold}")
+
+    bytes_data = sentence.encode("utf-8")
+
+    # Print entropy for each byte
+    print("\nByte-wise entropy:")
+    for b, entropy in zip(bytes_data, entropies):
+        char_repr = chr(b) if 32 <= b <= 126 else f"<{b}>"
+        print(
+            f"Byte: {b} ('{char_repr}'), Entropy: {entropy:.2f}, Above Threshold: {entropy > threshold}"
+        )
+
+    # Find indices where entropy exceeds threshold
+    high_entropy_indices = [i for i, e in enumerate(entropies) if e > threshold]
+    print(f"\nHigh entropy byte indices: {high_entropy_indices}")
+
+    if not high_entropy_indices:
+        return [sentence]
+
+    # Create patches using high entropy bytes as boundaries
+    patches = []
+    start = 0
+
+    for idx in high_entropy_indices:
+        # Add segment before the high entropy byte
+        if idx > start:
+            patches.append(sentence[start:idx])
+        # Add the high entropy byte as its own patch
+        patches.append(sentence[idx : idx + 1])
+        start = idx + 1
+
+    # Add the remaining segment if any
+    if start < len(sentence):
+        patches.append(sentence[start:])
+
+    return [p for p in patches if p]
+
+
+def display_patches_table(sentence: str, patches: List[str], method_name: str):
+    """Display patches in a tabular format"""
+    print(f"\n{method_name}:")
+    for i, patch in enumerate(patches, 1):
+        print(f"Patch {i}: '{patch}' ({len(patch.encode('utf-8'))} bytes)")
+
+
 def visualize_sentence_entropy(
     sentence: str,
     ngram_model: Dict[bytes, Counter],
@@ -140,50 +192,48 @@ def visualize_sentence_entropy(
     show_threshold: bool = True,
     show_average: bool = True,
 ):
-    """Visualize entropy analysis with optional threshold and average lines"""
+    """Visualize byte-wise entropy analysis"""
     entropies = analyze_sentence_entropy(sentence, ngram_model, ngram)
     bytes_data = sentence.encode("utf-8")
-    chars = [chr(b) if 32 <= b <= 126 else f"<{b}>" for b in bytes_data]
 
     plt.figure(figsize=(15, 6))
     positions = np.arange(len(entropies))
 
-    # Plot main entropy line
-    plt.plot(positions, entropies, "b-", linewidth=2, label="Entropy")
+    plt.plot(positions, entropies, "b-", linewidth=2, label="Byte Entropy")
 
-    # Add threshold line if requested
+    if show_average:
+        average = np.mean(entropies)
+        plt.axhline(
+            y=average,
+            color="green",
+            linestyle="dotted",
+            label=f"Average Byte Entropy (μ = {average:.2f})",
+        )
+
     if show_threshold:
-        threshold = np.mean(entropies) + np.std(entropies)
+        threshold = np.mean(entropies) + 1.0 * np.std(entropies)
         plt.axhline(
             y=threshold,
-            color="r",
+            color="red",
             linestyle="--",
             label=f"Threshold (μ+σ = {threshold:.2f})",
         )
 
-    # Add average line if requested
-    if show_average:
-        average = np.mean(entropies)
-        plt.axhline(
-            y=average, color="g", linestyle=":", label=f"Average (μ = {average:.2f})"
-        )
-
-    plt.title(f"{ngram}-gram Entropy Analysis")
+    plt.title(f"{ngram}-gram Byte-wise Entropy Analysis")
     plt.ylabel("Entropy (bits)")
     plt.grid(True, alpha=0.3)
 
-    plt.xticks(positions, chars, rotation=0, ha="center", fontsize=12)
+    # X-axis labels showing both byte value and character representation
+    x_labels = [
+        f"{b}\n'{chr(b)}'" if 32 <= b <= 126 else f"{b}\n<{b}>" for b in bytes_data
+    ]
+    plt.xticks(positions, x_labels, rotation=0, ha="center", fontsize=12)
 
-    # Plot points with different colors based on threshold
-    if show_threshold:
-        for i, entropy in enumerate(entropies):
-            if entropy > threshold:
-                plt.plot(i, entropy, "ro", markersize=8)
-            else:
-                plt.plot(i, entropy, "bo", markersize=6)
-    else:
-        for i, entropy in enumerate(entropies):
-            plt.plot(i, entropy, "bo", markersize=6)
+    for i, entropy in enumerate(entropies):
+        if entropy > threshold:
+            plt.plot(i, entropy, "ro", markersize=8)
+        else:
+            plt.plot(i, entropy, "bo", markersize=4)
 
     plt.legend()
     plt.tight_layout()
@@ -194,22 +244,23 @@ def analyze_and_print_patches(
     sentence: str,
     ngram_model: Dict[bytes, Counter],
     ngram: int = 2,
+    threshold: float = 3,
     show_threshold: bool = True,
     show_average: bool = True,
 ):
-    """Analyze a sentence and print patches"""
+    """Analyze a sentence and print patches using both methods"""
     print(f"\nAnalyzing: {sentence}")
 
     # Get entropies
     entropies = analyze_sentence_entropy(sentence, ngram_model, ngram)
 
-    # Detect patches using monotonic method
+    # Detect patches using both methods
+    global_patches = detect_patches_global(sentence, entropies, threshold)
     monotonic_patches = detect_patches_monotonic(sentence, entropies)
 
     # Print results
-    print("\nMonotonic Constraint Patches:")
-    for i, patch in enumerate(monotonic_patches, 1):
-        print(f"Patch {i}: '{patch}'")
+    display_patches_table(sentence, global_patches, "Global Threshold Patches")
+    display_patches_table(sentence, monotonic_patches, "Monotonic Constraint Patches")
 
     # Visualize
     visualize_sentence_entropy(
@@ -241,6 +292,7 @@ for sentence in test_sentences:
     analyze_and_print_patches(
         sentence,
         ngram_model,
+        threshold=None,  # set for global patching else mu+1*sigma (entropy)
         show_threshold=True,  # Set to False to hide threshold line
         show_average=True,  # Set to False to hide average line
     )
