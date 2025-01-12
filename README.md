@@ -2,7 +2,7 @@
 
 This repository contains code for experimenting with various concepts and research papers. It serves as a personal playground for me to explore new ideas and concepts, additionally, I use this to generate artifacts for my blog post.
 
-blog post: https://sagarsarkale.com/blogs
+Blog: https://sagarsarkale.com/blog
 
 # How to use this repository
 
