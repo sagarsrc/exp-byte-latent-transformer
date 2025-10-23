@@ -2,8 +2,6 @@
 
 An experimental implementation exploring entropy-based patching algorithms for byte-level language processing, inspired by Meta's Byte Latent Transformer research.
 
-![Byte Latent Transformer](https://sagarsarkale.com/blt1/000-cover.jpg)
-
 ## Overview
 
 This repository implements various byte-level tokenization strategies that use entropy analysis to intelligently segment text at the byte level. Unlike traditional tokenization methods that rely on fixed vocabularies or simple heuristics, this approach uses statistical entropy measures computed from n-gram language models to identify natural boundaries in byte streams.
@@ -19,20 +17,20 @@ Traditional tokenizers require vocabulary training and preprocessing, while byte
 
 ### 2. Entropy-Based Patching
 Multiple patching strategies are implemented:
-- **Fixed-Length Patching**: Splits text into fixed-size byte chunks
-- **Space-Based Patching**: Uses whitespace as natural boundaries
-- **Global Threshold Patching**: Creates patches based on entropy exceeding a global threshold ($\mu$ + $\sigma$)
-- **Monotonic Constraint Patching**: Segments text where entropy shows significant drops
-- **Double Derivative Patching**: Uses second-order entropy changes to detect patch boundaries
+
+**Fixed-Length Patching**: Splits text into fixed-size byte chunks
 
 ![Fixed Patching](https://sagarsarkale.com/blt1/003-fixed-patching.png)
-*Fixed K-byte patching with consistent intervals*
+
+**Space-Based Patching**: Uses whitespace as natural boundaries
 
 ![Space Patching](https://sagarsarkale.com/blt1/004-space-patching.png)
-*Space-based patching at whitespace boundaries*
 
-![Entropy Patching](https://sagarsarkale.com/blt1/005-entropy-diagram-1.0.png)
-*Entropy values across a sentence showing natural patch boundaries*
+**Entropy-Based Methods**: Global Threshold, Monotonic Constraint, and Double Derivative patching use entropy to find natural boundaries
+
+![Entropy Diagram](https://sagarsarkale.com/blt1/005-entropy-diagram-1.0.png)
+
+![Entropy with Boundaries](https://sagarsarkale.com/blt1/005-entropy-diagram-1.1.jpeg)
 
 ### 3. N-gram Language Models
 Builds statistical models (n=2,3,4,5) from a corpus of classic literature to estimate byte-level entropy and predictability.
@@ -92,6 +90,9 @@ For each byte position, the algorithm:
 3. Calculates Shannon entropy: $-\sum(p \times log_2(p))$
 4. Uses entropy to determine patch boundaries
 
+![Entropy Spikes](https://sagarsarkale.com/blt1/006-entropy-diagram-2.png)
+*Entropy spikes occur at unusual characters like uppercase letters and symbols, revealing natural segmentation points*
+
 ### Training Corpus
 
 The implementation uses classic literature from Project Gutenberg:
@@ -112,23 +113,14 @@ Models are cached in `./models/` directory for fast re-use.
 
 ## Example Output
 
-```
-Analyzing: I walked to the store and bought a book.
+![Patching Results](https://sagarsarkale.com/blt1/008-patches-1.png)
+*Comparison of global threshold and monotonic constraint patching on "I walked to the store and bought a book"*
 
-Combined N-gram Global Threshold Patches:
-+-------+-----+--------+----+-------+-----+--------+-----+--------+
-| Patch | 1   | 2      | 3  | 4     | 5   | 6      | 7   | 8      |
-+-------+-----+--------+----+-------+-----+--------+-----+--------+
-| Input | I   | walked | to | the   | ... | bought | a   | book.  |
-| #Bytes| 1   | 7      | 3  | 4     | ... | 7      | 2   | 5      |
-+-------+-----+--------+----+-------+-----+--------+-----+--------+
-```
+![Sherlock Example](https://sagarsarkale.com/blt1/008-patches-2.png)
+*Patching results for "Sherlock Holmes is a smart detective"*
 
-![Patching Comparison](https://sagarsarkale.com/blt1/008-patches-1.png)
-*Comparison of global threshold and monotonic constraint patching methods*
-
-![Entropy Analysis](https://sagarsarkale.com/blt1/006-entropy-diagram-2.png)
-*Entropy spikes occur at unusual words and symbols, identifying natural boundaries*
+![Sherlock Entropy](https://sagarsarkale.com/blt1/008-patches-3.png)
+*Entropy visualization showing patch boundaries for the Sherlock Holmes example*
 
 ## Environment Variables
 
@@ -138,7 +130,7 @@ Combined N-gram Global Threshold Patches:
 
 This implementation supports research and blog posts on byte-level language processing.
 
-Blog: https://sagarsarkale.com/blog
+Blog: https://sagarsarkale.com/blog/genai/precursors-to-byte-latent-transformer/
 
 ## Maintainer
 
