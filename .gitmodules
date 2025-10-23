@@ -1,3 +1,0 @@
-[submodule "kv-caching"]
-	path = kv-caching
-	url = git@github.com:sagarsrc/kv-caching.git
